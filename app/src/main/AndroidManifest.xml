@@ -28,7 +28,7 @@
         <activity
             android:name=".MapsActivity"
             android:exported="true"
-            android:label="njsdnjdn"
+            android:label="Google Map"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
