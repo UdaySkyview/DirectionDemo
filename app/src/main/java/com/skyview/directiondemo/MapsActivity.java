@@ -105,6 +105,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             DownloadTask downloadTask = new DownloadTask();
             if(url!=""){
                 downloadTask.execute(url);
+            }else {
+                Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
             }
         });
 
