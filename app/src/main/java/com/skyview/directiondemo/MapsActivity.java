@@ -73,7 +73,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         Objects.requireNonNull(mapFragment).getMapAsync(this);
-
         requestPermission();
         locationOn();
 
@@ -91,23 +90,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
         if (checkLocationEnabled()) {
-
             getCurrentLocation();
-
             getLiveLocation();
-
         }
 
-        mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(@NonNull LatLng latLng) {
-                if (polyline != null) {
-                    polyline.remove();
-                }
-                String url = getDirectionsUrl(currentLatLng, latLng);
-                DownloadTask downloadTask = new DownloadTask();
-                downloadTask.execute(url);
+        mMap.setOnMapClickListener(latLng -> {
+            if (polyline != null) {
+                polyline.remove();
             }
+            String url = getDirectionsUrl(currentLatLng, latLng);
+            DownloadTask downloadTask = new DownloadTask();
+            downloadTask.execute(url);
         });
 
     }
@@ -118,31 +111,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         HttpURLConnection urlConnection = null;
         try {
             URL url = new URL(strUrl);
-
-            // Creating an http connection to communicate with url
             urlConnection = (HttpURLConnection) url.openConnection();
-
-            // Connecting to url
             urlConnection.connect();
-
-            // Reading data from url
             iStream = urlConnection.getInputStream();
-
             BufferedReader br = new BufferedReader(new InputStreamReader(iStream));
-
             StringBuffer sb = new StringBuffer();
-
             String line = "";
             while ((line = br.readLine()) != null) {
                 sb.append(line);
             }
-
             data = sb.toString();
-
             br.close();
-
         } catch (Exception e) {
-            //  Log.d("Exception while downloading url", e.toString());
         } finally {
             iStream.close();
             urlConnection.disconnect();
@@ -151,16 +131,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private class DownloadTask extends AsyncTask<String, Void, String> {
-
-        // Downloading data in non-ui thread
         @Override
         protected String doInBackground(String... url) {
-
-            // For storing data from web service
             String data = "";
-
             try {
-                // Fetching the data from web service
                 data = downloadUrl(url[0]);
             } catch (Exception e) {
                 Log.d("Background Task", e.toString());
@@ -168,34 +142,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return data;
         }
 
-        // Executes in UI thread, after the execution of
-        // doInBackground()
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
             ParserTask parserTask = new ParserTask();
-
-            // Invokes the thread for parsing the JSON data
             parserTask.execute(result);
-
         }
     }
 
     private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
-
-        // Parsing the data in non-ui thread
         @Override
         protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
-
             JSONObject jObject;
             List<List<HashMap<String, String>>> routes = null;
-
             try {
                 jObject = new JSONObject(jsonData[0]);
                 DirectionsJSONParser parser = new DirectionsJSONParser();
-
-                // Starts parsing data
                 routes = parser.parse(jObject);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -203,37 +165,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return routes;
         }
 
-        // Executes in UI thread, after the parsing process
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> result) {
             ArrayList<LatLng> points = null;
             PolylineOptions lineOptions = null;
             String distance = "";
             String duration = "";
-
-
             if (result.size() < 1) {
                 Toast.makeText(getBaseContext(), "No Points", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-
-            // Traversing through all the routes
             for (int i = 0; i < result.size(); i++) {
                 points = new ArrayList<LatLng>();
                 lineOptions = new PolylineOptions();
-
-                // Fetching i-th route
                 List<HashMap<String, String>> path = result.get(i);
-
-                // Fetching all the points in i-th route
                 for (int j = 0; j < path.size(); j++) {
                     HashMap<String, String> point = path.get(j);
-
-                    if (j == 0) {   // Get distance from the list
+                    if (j == 0) {
                         distance = (String) point.get("distance");
                         continue;
-                    } else if (j == 1) { // Get duration from the list
+                    } else if (j == 1) {
                         duration = (String) point.get("duration");
                         continue;
                     }
@@ -244,50 +195,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     points.add(position);
                 }
-
-                // Adding all the points in the route to LineOptions
                 lineOptions.addAll(points);
                 lineOptions.width(8);
                 lineOptions.color(Color.RED);
                 lineOptions.clickable(true);
 
             }
-
-            //tvDistanceDuration.setText("Distance:"+distance + ", Duration:"+duration);
-
-            // Drawing polyline in the Google Map for the i-th route
             polyline = mMap.addPolyline(lineOptions);
         }
     }
 
     private String getDirectionsUrl(LatLng origin, LatLng dest) {
-
-        // Origin of route
         String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-
-        // Destination of route
         String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-
-        //String str_next = "next="+next.latitude+","+next.longitude;
-
-
-        // Sensor enabled
         String sensor = "sensor=false";
-
-        // API key
-
         String key = "key=AIzaSyB51KhXY-UTRgW7lfV0oh0DXA8FYPkwEbo";
-
-        // Building the parameters to the web service
         String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + key;
-
-        // Output format
         String output = "json";
-
-        // Building the url to the web service
         String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters;
-
-
         return url;
     }
 
@@ -313,7 +238,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private boolean checkLocationEnabled() {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
         if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             return true;
         }
@@ -322,7 +246,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private void getCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
 
             return;
         }
