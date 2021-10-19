@@ -98,9 +98,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if (polyline != null) {
                 polyline.remove();
             }
-            String url = getDirectionsUrl(currentLatLng, latLng);
+            String url="";
+            if(currentLatLng!=null&&latLng!=null){
+                url = getDirectionsUrl(currentLatLng, latLng);
+            }
             DownloadTask downloadTask = new DownloadTask();
-            downloadTask.execute(url);
+            if(url!=""){
+                downloadTask.execute(url);
+            }
         });
 
     }
