@@ -298,6 +298,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (marker != null) {
                         marker.remove();
                     }
+
+                    saveLatLangToDb(location.getLatitude(), location.getLongitude());
+
                     currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                     marker = mMap.addMarker(markerOptions
                             .position(currentLatLng));
