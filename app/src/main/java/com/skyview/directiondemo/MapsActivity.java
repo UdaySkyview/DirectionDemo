@@ -35,6 +35,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.skyview.directiondemo.databinding.ActivityMapsBinding;
 
 import org.jetbrains.annotations.NotNull;
@@ -62,6 +64,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker marker;
     private LatLng currentLatLng;
     private Polyline polyline;
+    private String number="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +82,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void initViews() {
+        number=getIntent().getStringExtra("number");
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         markerOptions = new MarkerOptions();
         initLocationCallBack();
@@ -88,7 +92,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
-
+        mMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
         if (checkLocationEnabled()) {
             getCurrentLocation();
             getLiveLocation();
@@ -269,8 +273,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(
                         new LatLng(location1.getLatitude(), location1.getLongitude()), 16f);
                 mMap.animateCamera(cameraUpdate);
+                mMap.moveCamera(cameraUpdate);
+                saveLatLangToDb(location1.getLatitude(),location1.getLongitude());
             });
         }
+    }
+
+    private void saveLatLangToDb(double latitude, double longitude) {
+        FirebaseDatabase database=FirebaseDatabase.getInstance();
+        DatabaseReference reference=database.getReference(number);
+        reference.child("latitude").setValue(latitude);
+        reference.child("longtitude").setValue(longitude);
     }
 
     private void initLocationCallBack() {
