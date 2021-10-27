@@ -1,9 +1,5 @@
 package com.skyview.directiondemo;
 
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
-
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -15,7 +11,13 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationAvailability;
@@ -28,15 +30,17 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.skyview.directiondemo.databinding.ActivityMapsBinding;
 
 import org.jetbrains.annotations.NotNull;
@@ -56,7 +60,6 @@ import java.util.Objects;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private ActivityMapsBinding binding;
     private final static int LOCATION_REQUEST_CODE = 23;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
@@ -65,12 +68,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng currentLatLng;
     private Polyline polyline;
     private String number="";
+    private List<String> list=new ArrayList<String>();
+    private Spinner spinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        binding = ActivityMapsBinding.inflate(getLayoutInflater());
+        com.skyview.directiondemo.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         initViews();
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -78,13 +83,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Objects.requireNonNull(mapFragment).getMapAsync(this);
         requestPermission();
         locationOn();
+        setUsersToSpinner();
+    }
 
+    private void setUsersToSpinner() {
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference databaseReference = database.getReference();
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                list.clear();
+                for(DataSnapshot ds : snapshot.getChildren()) {
+                    list.add(ds.getKey());
+                }
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1,list);
+                spinner.setAdapter(adapter);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.d("TAG", "onCancelled: "+error);
+            }
+        });
     }
 
     private void initViews() {
         number=getIntent().getStringExtra("number");
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         markerOptions = new MarkerOptions();
+        spinner=findViewById(R.id.allLocationSpinner);
         initLocationCallBack();
     }
 
@@ -98,7 +125,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             getLiveLocation();
         }
 
-        mMap.setOnMapClickListener(latLng -> {
+        // on map click event
+
+        /*mMap.setOnMapClickListener(latLng -> {
             if (polyline != null) {
                 polyline.remove();
             }
@@ -112,7 +141,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }else {
                 Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
             }
-        });
+        });*/
 
     }
 
@@ -265,7 +294,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
         if (checkLocationEnabled()) {
-
             Task<Location> location = fusedLocationProviderClient.getLastLocation();
             location.addOnSuccessListener((Location location1) -> {
                 marker = mMap.addMarker(markerOptions

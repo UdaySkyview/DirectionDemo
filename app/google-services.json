@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "958251049336",
+    "project_id": "directiondemo-699f9",
+    "storage_bucket": "directiondemo-699f9.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:958251049336:android:ee5b9e8174c7d423dba88d",
+        "android_client_info": {
+          "package_name": "com.skyview.directiondemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "958251049336-bbcbji8gll5iuj526lvi68prlunu8e0r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2sX5kUChShX6XQDOLK936vxQHC9hKDB0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "958251049336-bbcbji8gll5iuj526lvi68prlunu8e0r.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
