@@ -11,6 +11,8 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -44,6 +46,7 @@ import com.google.firebase.database.ValueEventListener;
 import com.skyview.directiondemo.databinding.ActivityMapsBinding;
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -66,10 +69,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private MarkerOptions markerOptions;
     private Marker marker;
     private LatLng currentLatLng;
+    private LatLng destinyLatLng;
     private Polyline polyline;
     private String number="";
     private List<String> list=new ArrayList<String>();
     private Spinner spinner;
+    private String destinyId="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,12 +83,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         com.skyview.directiondemo.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         initViews();
+        setUsersToSpinner();
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         Objects.requireNonNull(mapFragment).getMapAsync(this);
         requestPermission();
         locationOn();
-        setUsersToSpinner();
     }
 
     private void setUsersToSpinner() {
@@ -98,6 +104,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 ArrayAdapter<String> adapter = new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1,list);
                 spinner.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
             }
 
             @Override
@@ -105,6 +112,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Log.d("TAG", "onCancelled: "+error);
             }
         });
+        if (list.size()>0)
+        destinyId=list.get(0);
+        //setDestinyLatLong(databaseReference, database);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                    destinyId=list.get(i);
+                    setDestinyLatLong(databaseReference, database);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+    }
+
+    private void setDestinyLatLong(DatabaseReference databaseReference,FirebaseDatabase database) {
+        databaseReference=database.getReference(destinyId);
+        databaseReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                //JSONObject jsonObject= (JSONObject) snapshot.getValue();
+               /* try {
+                    destinyLatLng=new LatLng(jsonObject.getDouble("latitude"),jsonObject.getDouble("longtitude"));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }*/
+                Double lat=Double.parseDouble(snapshot.child("latitude").getValue().toString());
+                Double lang=Double.parseDouble(snapshot.child("longtitude").getValue().toString());
+                destinyLatLng=new LatLng(lat,lang);
+                callDirectionCode();
+
+                //Toast.makeText(MapsActivity.this, ""+snapshot.child("latitude").getValue(), Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
     }
 
     private void initViews() {
@@ -127,22 +176,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // on map click event
 
-        /*mMap.setOnMapClickListener(latLng -> {
-            if (polyline != null) {
-                polyline.remove();
-            }
-            String url="";
-            if(currentLatLng!=null&&latLng!=null){
-                url = getDirectionsUrl(currentLatLng, latLng);
-            }
-            DownloadTask downloadTask = new DownloadTask();
-            if(url!=""){
-                downloadTask.execute(url);
-            }else {
-                Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
-            }
-        });*/
+        //callDirectionCode();
 
+    }
+
+    private void callDirectionCode() {
+        if (polyline != null) {
+            polyline.remove();
+        }
+        String url="";
+        if(currentLatLng!=null&&destinyLatLng!=null){
+            url = getDirectionsUrl(currentLatLng, destinyLatLng);
+        }
+        DownloadTask downloadTask = new DownloadTask();
+        if(url!=""){
+            downloadTask.execute(url);
+        }else {
+            Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String downloadUrl(String strUrl) throws IOException {
