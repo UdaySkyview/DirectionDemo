@@ -71,10 +71,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng currentLatLng;
     private LatLng destinyLatLng;
     private Polyline polyline;
-    private String number="";
-    private List<String> list=new ArrayList<String>();
+    private String number = "";
+    private List<String> list = new ArrayList<String>();
     private Spinner spinner;
-    private String destinyId="";
+    private String destinyId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,27 +99,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 list.clear();
-                for(DataSnapshot ds : snapshot.getChildren()) {
+                for (DataSnapshot ds : snapshot.getChildren()) {
                     list.add(ds.getKey());
                 }
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1,list);
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1, list);
                 spinner.setAdapter(adapter);
                 adapter.notifyDataSetChanged();
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.d("TAG", "onCancelled: "+error);
+                Log.d("TAG", "onCancelled: " + error);
             }
         });
-        if (list.size()>0)
-        destinyId=list.get(0);
+        if (list.size() > 0)
+            destinyId = list.get(0);
         //setDestinyLatLong(databaseReference, database);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                    destinyId=list.get(i);
-                    setDestinyLatLong(databaseReference, database);
+                destinyId = list.get(i);
+                setDestinyLatLong(databaseReference, database);
             }
 
             @Override
@@ -129,8 +129,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    private void setDestinyLatLong(DatabaseReference databaseReference,FirebaseDatabase database) {
-        databaseReference=database.getReference(destinyId);
+    private void setDestinyLatLong(DatabaseReference databaseReference, FirebaseDatabase database) {
+        databaseReference = database.getReference(destinyId);
         databaseReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -140,9 +140,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }*/
-                Double lat=Double.parseDouble(snapshot.child("latitude").getValue().toString());
-                Double lang=Double.parseDouble(snapshot.child("longtitude").getValue().toString());
-                destinyLatLng=new LatLng(lat,lang);
+                Double lat = Double.parseDouble(snapshot.child("latitude").getValue().toString());
+                Double lang = Double.parseDouble(snapshot.child("longtitude").getValue().toString());
+                destinyLatLng = new LatLng(lat, lang);
                 callDirectionCode();
 
                 //Toast.makeText(MapsActivity.this, ""+snapshot.child("latitude").getValue(), Toast.LENGTH_SHORT).show();
@@ -157,10 +157,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void initViews() {
-        number=getIntent().getStringExtra("number");
+        number = getIntent().getStringExtra("number");
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         markerOptions = new MarkerOptions();
-        spinner=findViewById(R.id.allLocationSpinner);
+        spinner = findViewById(R.id.allLocationSpinner);
         initLocationCallBack();
     }
 
@@ -184,14 +184,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (polyline != null) {
             polyline.remove();
         }
-        String url="";
-        if(currentLatLng!=null&&destinyLatLng!=null){
+        String url = "";
+        if (currentLatLng != null && destinyLatLng != null) {
             url = getDirectionsUrl(currentLatLng, destinyLatLng);
         }
         DownloadTask downloadTask = new DownloadTask();
-        if(url!=""){
+        if (url != "") {
             downloadTask.execute(url);
-        }else {
+        } else {
             Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
         }
     }
@@ -353,14 +353,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         new LatLng(location1.getLatitude(), location1.getLongitude()), 16f);
                 mMap.animateCamera(cameraUpdate);
                 mMap.moveCamera(cameraUpdate);
-                saveLatLangToDb(location1.getLatitude(),location1.getLongitude());
+                saveLatLangToDb(location1.getLatitude(), location1.getLongitude());
             });
         }
     }
 
     private void saveLatLangToDb(double latitude, double longitude) {
-        FirebaseDatabase database=FirebaseDatabase.getInstance();
-        DatabaseReference reference=database.getReference(number);
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference reference = database.getReference(number);
         reference.child("latitude").setValue(latitude);
         reference.child("longtitude").setValue(longitude);
     }
@@ -383,7 +383,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                     marker = mMap.addMarker(markerOptions
                             .position(currentLatLng));
-                    mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLatLng));
+                    //mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLatLng));
                 }
             }
 
