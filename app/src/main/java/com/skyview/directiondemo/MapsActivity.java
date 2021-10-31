@@ -1,9 +1,11 @@
 package com.skyview.directiondemo;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -14,10 +16,12 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
@@ -38,6 +42,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -46,7 +51,6 @@ import com.google.firebase.database.ValueEventListener;
 import com.skyview.directiondemo.databinding.ActivityMapsBinding;
 
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -71,10 +75,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng currentLatLng;
     private LatLng destinyLatLng;
     private Polyline polyline;
-    private String number = "";
-    private List<String> list = new ArrayList<String>();
+    private String key = "";
+    private final List<String> list = new ArrayList<>();
     private Spinner spinner;
     private String destinyId = "";
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,17 +87,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         com.skyview.directiondemo.databinding.ActivityMapsBinding binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        saveUser();
         initViews();
         setUsersToSpinner();
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         Objects.requireNonNull(mapFragment).getMapAsync(this);
+
         requestPermission();
         locationOn();
     }
 
+    @SuppressLint("CommitPrefEdits")
+    private void saveUser() {
+        SharedPreferences preferences = this.getSharedPreferences("UserInfo", Context.MODE_PRIVATE);
+        key = preferences.getString("UserKey", "");
+        preferences.edit().putBoolean("USER_CREATED", true).apply();
+    }
+
     private void setUsersToSpinner() {
+        progressBar.setVisibility(View.VISIBLE);
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         DatabaseReference databaseReference = database.getReference();
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -102,19 +118,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 for (DataSnapshot ds : snapshot.getChildren()) {
                     list.add(ds.getKey());
                 }
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1, list);
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(getBaseContext(), android.R.layout.simple_list_item_1, list);
                 spinner.setAdapter(adapter);
                 adapter.notifyDataSetChanged();
+                progressBar.setVisibility(View.INVISIBLE);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                progressBar.setVisibility(View.INVISIBLE);
+                Toast.makeText(MapsActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
                 Log.d("TAG", "onCancelled: " + error);
             }
         });
         if (list.size() > 0)
             destinyId = list.get(0);
-        //setDestinyLatLong(databaseReference, database);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
@@ -130,37 +148,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setDestinyLatLong(DatabaseReference databaseReference, FirebaseDatabase database) {
+        progressBar.setVisibility(View.VISIBLE);
         databaseReference = database.getReference(destinyId);
         databaseReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                //JSONObject jsonObject= (JSONObject) snapshot.getValue();
-               /* try {
-                    destinyLatLng=new LatLng(jsonObject.getDouble("latitude"),jsonObject.getDouble("longtitude"));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }*/
                 Double lat = Double.parseDouble(snapshot.child("latitude").getValue().toString());
                 Double lang = Double.parseDouble(snapshot.child("longtitude").getValue().toString());
                 destinyLatLng = new LatLng(lat, lang);
                 callDirectionCode();
-
-                //Toast.makeText(MapsActivity.this, ""+snapshot.child("latitude").getValue(), Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.INVISIBLE);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-
+                progressBar.setVisibility(View.INVISIBLE);
+                Toast.makeText(MapsActivity.this, error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
-
     }
 
     private void initViews() {
-        number = getIntent().getStringExtra("number");
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         markerOptions = new MarkerOptions();
         spinner = findViewById(R.id.allLocationSpinner);
+        progressBar = findViewById(R.id.progressBar);
         initLocationCallBack();
     }
 
@@ -173,14 +185,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             getCurrentLocation();
             getLiveLocation();
         }
-
-        // on map click event
-
-        //callDirectionCode();
-
     }
 
     private void callDirectionCode() {
+
         if (polyline != null) {
             polyline.remove();
         }
@@ -194,6 +202,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } else {
             Toast.makeText(getBaseContext(), "Something went wrong", Toast.LENGTH_SHORT).show();
         }
+
     }
 
     private String downloadUrl(String strUrl) throws IOException {
@@ -214,6 +223,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             data = sb.toString();
             br.close();
         } catch (Exception e) {
+            Toast.makeText(MapsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
         } finally {
             iStream.close();
             urlConnection.disconnect();
@@ -228,6 +238,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             try {
                 data = downloadUrl(url[0]);
             } catch (Exception e) {
+                Toast.makeText(MapsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 Log.d("Background Task", e.toString());
             }
             return data;
@@ -251,6 +262,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 DirectionsJSONParser parser = new DirectionsJSONParser();
                 routes = parser.parse(jObject);
             } catch (Exception e) {
+                Toast.makeText(MapsActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
             }
             return routes;
@@ -279,18 +291,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         duration = (String) point.get("duration");
                         continue;
                     }
-
                     double lat = Double.parseDouble(point.get("lat"));
                     double lng = Double.parseDouble(point.get("lng"));
                     LatLng position = new LatLng(lat, lng);
-
                     points.add(position);
                 }
                 lineOptions.addAll(points);
                 lineOptions.width(8);
                 lineOptions.color(Color.RED);
                 lineOptions.clickable(true);
-
             }
             polyline = mMap.addPolyline(lineOptions);
         }
@@ -360,7 +369,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void saveLatLangToDb(double latitude, double longitude) {
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        DatabaseReference reference = database.getReference(number);
+        DatabaseReference reference = database.getReference(key);
         reference.child("latitude").setValue(latitude);
         reference.child("longtitude").setValue(longitude);
     }
@@ -383,7 +392,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                     marker = mMap.addMarker(markerOptions
                             .position(currentLatLng));
-                    //mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLatLng));
+                    /*if (currentLatLng != null && destinyLatLng != null) {
+                        callDirectionCode();
+                    }*/
                 }
             }
 
